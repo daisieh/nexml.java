@@ -35,12 +35,14 @@ public class TSSHandler extends NamespaceHandler {
     private Vector<PropertyValue> canvasProperties;
     private Vector<PropertyValue> scaleProperties;
     private boolean generalSelectorsHaveInitialized = false;
+    public static final String TSSPrefix = "tss";
+    public static final String TSSURIString = "http://mesquiteproject.org/tss#";
 
     public TSSHandler() {
         super();
         mTSSHash = new Hashtable();
         try {
-            mTSSFile = new File(mesquite.lib.MesquiteModule.prefsDirectory + mesquite.lib.MesquiteFile.fileSeparator + "default.tss");
+            mTSSFile = new File(mesquite.lib.MesquiteModule.mesquiteDirectory + mesquite.lib.MesquiteFile.fileSeparator + "default.tss");
         } catch (Exception e) {
             if (e instanceof FileNotFoundException) {
                 MesquiteMessage.discreetNotifyUser("This XML file uses TSS notation, but no TSS file was found.");
@@ -112,7 +114,7 @@ public class TSSHandler extends NamespaceHandler {
 	@Override
 	public
 	String getPrefix() {
-		return Constants.TSSPrefix;
+		return TSSPrefix;
 	}
 
 	/* (non-Javadoc)
@@ -121,7 +123,7 @@ public class TSSHandler extends NamespaceHandler {
 	@Override
 	public
 	String getURIString() {
-		return Constants.TSSURIString;
+		return TSSURIString;
 	}
 // This parses the actual xml meta tag for TSS
 // index is the Mesquite node ID

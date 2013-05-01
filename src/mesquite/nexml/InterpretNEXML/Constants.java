@@ -14,11 +14,8 @@ public class Constants {
 	public static final String BasePrefix = "msq";
 	public static final String NRPrefix = "nr";
 	public static final String BeanPrefix = "bean";
-	public static final String TSSPrefix = "tss";
-
 	public static final URI BaseURI = URI.create(BaseURIString);
 	public static final URI BeanURI = URI.create(BeanURIString);
-	public static final URI TSSURI = URI.create(TSSURIString);
 
 	public static final String TaxaUID  = BasePrefix + ":taxaUID";
 	public static final String TaxonUID = BasePrefix + ":taxonUID";
