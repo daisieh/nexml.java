@@ -18,6 +18,7 @@
 	<property name="mesquitezip" value="mesquite-nexml.zip"/>
 	<property name="mesquite-properties" value="mesquite/nexml/InterpretNEXML/predicateHandlerMapping.properties"/>
 	<property name="mesquite-ns-properties" value="mesquite/nexml/InterpretNEXML/namespaceHandlerMapping.properties"/>
+	<property name="default-tss" value="default.tss"/>
 	<property environment="env"/>
 
 	<!-- CORE LIBRARY -->
@@ -73,15 +74,13 @@
 
 	<!-- MESQUITE -->
 	<path id="classpath-mesquite">
-		<!--<pathelement path="${env.MESQUITE_ROOT}"/>-->
-        <pathelement path="/Users/daisie/Documents/Work/Sandbox/Eclipse/Mesquite/bin"/>
-    </path>
+		<pathelement path="${env.MESQUITE_ROOT}"/>
+	</path>
 
 	<target name="build-mesquite" depends="clean">
 		<mkdir dir="${classfiles}"/>
-    	<unzip src="${lib}/${osbcpcssjar}" dest="${classfiles}"/>
 		<echo message="Using MESQUITE_ROOT=${toString:classpath-mesquite}"/>
-		<javac srcdir="${src}" destdir="${classfiles}" debug="true" debuglevel="lines,source" target="1.5" source="1.5" includeantruntime="false">
+		<javac srcdir="${src}" destdir="${classfiles}" debug="true" debuglevel="lines,source" target="1.5" source="1.5">
 			<exclude name="**/validator/*"/>
 			<exclude name="**/transformer/*"/>
 			<classpath refid="classpath-mesquite"/>
@@ -98,8 +97,9 @@
 		<copy todir="${toString:classpath-mesquite}">
 			<fileset dir="${classfiles}"/>
 		</copy>
-		<copyfile dest="${toString:classpath-mesquite}/${mesquite-properties}" src="${src}/${mesquite-properties}"/>
-		<copyfile dest="${toString:classpath-mesquite}/${mesquite-ns-properties}" src="${src}/${mesquite-ns-properties}"/>
+		<copy tofile="${env.MESQUITE_ROOT}/${mesquite-properties}" file="${src}/${mesquite-properties}"/>
+		<copy tofile="${env.MESQUITE_ROOT}/${mesquite-ns-properties}" file="${src}/${mesquite-ns-properties}"/>
+		<copy tofile="${env.MESQUITE_ROOT}/${default-tss}" file="${resources}/${default-tss}"/>
 	</target>
 
 	<!-- JUNIT TESTS -->
@@ -139,6 +139,9 @@
         <delete file="${jarfile}"/>
     	<delete file="${mesquitezip}"/>
     	<delete file="${validatorjar}"/>
+		<delete file="${env.MESQUITE_ROOT}/${mesquite-properties}"/>
+		<delete file="${env.MESQUITE_ROOT}/${mesquite-ns-properties}"/>
+		<delete file="${env.MESQUITE_ROOT}/${default-tss}"/>
     </target>
 
 </project>
