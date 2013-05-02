@@ -34,7 +34,6 @@ public class TSSHandler extends NamespaceHandler {
     private Vector<PropertyValue> treeProperties;
     private Vector<PropertyValue> canvasProperties;
     private Vector<PropertyValue> scaleProperties;
-    private boolean generalSelectorsHaveInitialized = false;
     public static final String TSSPrefix = "tss";
     public static final String TSSURIString = "http://mesquiteproject.org/tss#";
 
