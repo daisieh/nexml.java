@@ -176,21 +176,16 @@ public class TSSHandler extends NamespaceHandler {
         Commandable treeWindow = (Commandable) treeWindowMaker.doCommand("getTreeWindow", Integer.toString(1), cc);
         BasicTreeDrawCoordinator treeDrawCoordinator = (BasicTreeDrawCoordinator) treeWindow.doCommand("getTreeDrawCoordinator", "#mesquite.trees.BasicTreeDrawCoordinator.BasicTreeDrawCoordinator", cc);
         BasicDrawTaxonNames taxonNames = (BasicDrawTaxonNames) treeDrawCoordinator.doCommand("getEmployee","#mesquite.trees.BasicDrawTaxonNames.BasicDrawTaxonNames");
-        DrawTree treeDrawer = (DrawTree) treeDrawCoordinator.doCommand("setTreeDrawer", "#mesquite.trees.SquareTree.SquareTree", cc);
-        NodeLocsStandard nodeLocs = (NodeLocsStandard) treeDrawer.doCommand("setNodeLocs","#mesquite.trees.NodeLocsStandard.NodeLocsStandard",cc);
-
-
-        treeWindowMaker.doCommand("suppressEPCResponse","",cc);
-        treeWindowMaker.doCommand("setTreeSource","#mesquite.trees.StoredTrees.StoredTrees",cc);
-        nodeLocs.doCommand("toggleCenter","on",cc);
 
         // tell the treeDrawCoordinator to set canvas settings:
+        treeWindowMaker.doCommand("suppressEPCResponse","",cc);
+        treeWindowMaker.doCommand("setTreeSource","#mesquite.trees.StoredTrees.StoredTrees",cc);
+
         if (canvasProperties != null) {
             Dimension dim = (Dimension) treeWindow.doCommand("getTreePaneSize","",cc);
             int width = dim.width;
             int height = dim.height;
             for (PropertyValue pv : canvasProperties) {
-                MesquiteMessage.notifyProgrammer("setting canvasProperty "+pv.toString());
                 if (pv.getProperty().equalsIgnoreCase("background-color")) {
                     //set the color to the standard color
 					treeDrawCoordinator.doCommand("setBackground", pv.getValue(), cc);
@@ -207,37 +202,70 @@ public class TSSHandler extends NamespaceHandler {
             treeWindow.doCommand("setSize", width+" "+height, cc);
         }
 
+        String layout = null;
+        String borderWidth = null;
+        String borderColor = null;
+        String branchLengthsToggle = null;
+        String tipOrientation = null;
+
         if (treeProperties != null) {
             for (PropertyValue pv : treeProperties) {
                 if (pv.getProperty().equalsIgnoreCase("layout")) {
-                    //this isn't implemented yet
+                    if (pv.getValue().equalsIgnoreCase("rectangular")) {
+                        layout = "mesquite.trees.StyledSquareTree.StyledSquareTree";
+                    } else if (pv.getValue().equalsIgnoreCase("diagonal")) {
+                        layout = "mesquite.trees.DiagonalDrawTree.DiagonalDrawTree";
+                    } else if (pv.getValue().equalsIgnoreCase("circular")) {
+                        layout = "mesquite.ornamental.CircularTree.CircularTree";
+                    }
                 } else if (pv.getProperty().equalsIgnoreCase("border-width")) {
-                    String borderWidth = pv.getValue();
-					treeDrawer.doCommand("setStemWidth", borderWidth, cc);
-					treeDrawer.doCommand("setEdgeWidth", borderWidth, cc);
+                    borderWidth = pv.getValue();
                 } else if (pv.getProperty().equalsIgnoreCase("border-color")) {
-					treeDrawer.doCommand("setBranchColor", pv.getValue(), cc);
+                    borderColor = pv.getValue();
                 } else if (pv.getProperty().equalsIgnoreCase("border-style")) {
                 	// this isn't implemented yet
                 } else if (pv.getProperty().equalsIgnoreCase("scaled")) {
                 	if (pv.getValue().equalsIgnoreCase("true")) {
-						nodeLocs.doCommand("branchLengthsToggle", "on", cc);
+                        branchLengthsToggle = "on";
 					} else {
-						nodeLocs.doCommand("branchLengthsToggle", "off", cc);
+                        branchLengthsToggle = "off";
 					}
                 } else if (pv.getProperty().equalsIgnoreCase("tip-orientation")) {
-                    String tipOrientation = pv.getValue();
-					if (tipOrientation.equalsIgnoreCase("up")) {
-						treeDrawer.doCommand("orientUP","",cc);
-					} else if (tipOrientation.equalsIgnoreCase("left")) {
-						treeDrawer.doCommand("orientLEFT","",cc);
-					} else if (tipOrientation.equalsIgnoreCase("right")) {
-						treeDrawer.doCommand("orientRIGHT","",cc);
-					} else if (tipOrientation.equalsIgnoreCase("down")) {
-						treeDrawer.doCommand("orientDOWN","",cc);
-					}
+                    tipOrientation = pv.getValue();
                 }
             }
+        }
+
+        // execute the treeDrawer commands in order:
+        DrawTree treeDrawer = (DrawTree) treeDrawCoordinator.doCommand("getTreeDrawer","",cc);
+        if (layout != null) {
+            if (isTreeDrawerAvailable(layout)) {
+                treeDrawer = (DrawTree) treeDrawCoordinator.doCommand("setTreeDrawer", "#"+layout, cc);
+            }
+        }
+        if (borderWidth != null) {
+            treeDrawer.doCommand("setStemWidth", borderWidth, cc);
+            treeDrawer.doCommand("setEdgeWidth", borderWidth, cc);
+        }
+        if (borderColor != null) {
+            treeDrawer.doCommand("setBranchColor", borderColor, cc);
+        }
+        if (tipOrientation != null) {
+            if (tipOrientation.equalsIgnoreCase("up")) {
+                treeDrawer.doCommand("orientUP","",cc);
+            } else if (tipOrientation.equalsIgnoreCase("left")) {
+                treeDrawer.doCommand("orientLEFT","",cc);
+            } else if (tipOrientation.equalsIgnoreCase("right")) {
+                treeDrawer.doCommand("orientRIGHT","",cc);
+            } else if (tipOrientation.equalsIgnoreCase("down")) {
+                treeDrawer.doCommand("orientDOWN","",cc);
+            }
+        }
+
+        NodeLocsStandard nodeLocs = (NodeLocsStandard) treeDrawer.doCommand("setNodeLocs","#mesquite.trees.NodeLocsStandard.NodeLocsStandard",cc);
+        nodeLocs.doCommand("toggleCenter","on",cc);
+        if (branchLengthsToggle != null) {
+            nodeLocs.doCommand("branchLengthsToggle", branchLengthsToggle, cc);
         }
 
         if (scaleProperties != null) {
@@ -527,5 +555,16 @@ public class TSSHandler extends NamespaceHandler {
                 }
             }
         }
+    }
+
+    private boolean isTreeDrawerAvailable (String treeDrawerClassName) {
+        Listable[] stuff = MesquiteTrunk.mesquiteModulesInfoVector.getModulesOfDuty(DrawTree.class, null, null);
+        for (int i=0;i<stuff.length; i++) {
+            String thisTD = ((MesquiteModuleInfo) stuff[i]).getClassName();
+            if (thisTD.equalsIgnoreCase(treeDrawerClassName)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
