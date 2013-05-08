@@ -17,8 +17,6 @@ import mesquite.trees.BasicTreeDrawCoordinator.BasicTreeDrawCoordinator;
 import mesquite.trees.BasicTreeWindowCoord.BasicTreeWindowCoord;
 import mesquite.trees.BasicTreeWindowMaker.BasicTreeWindowMaker;
 import mesquite.trees.NodeLocsStandard.NodeLocsStandard;
-import org.nexml.model.Annotatable;
-import org.nexml.model.Annotation;
 
 import com.osbcp.cssparser.*;
 
@@ -93,16 +91,15 @@ public class TSSHandler extends NamespaceHandler {
                     }
                     selectorSubClass = min+"."+max;
                 }
-                if (selectorSubClass.isEmpty()) {
-                    mTSSHash.put(selectorName, pvs);
-                } else {
-                    Hashtable subClassHash = (Hashtable) mTSSHash.get(selectorName);
-                    if (subClassHash == null) {
-                        subClassHash = new Hashtable();
-                    }
-                    subClassHash.put(selectorSubClass,pvs);
+                Hashtable subClassHash = (Hashtable) mTSSHash.get(selectorName);
+                if (subClassHash == null) {
+                    subClassHash = new Hashtable();
                     mTSSHash.put(selectorName,subClassHash);
                 }
+                if (selectorSubClass.isEmpty()) {
+                    selectorSubClass = Constants.NO_VALUE;
+                }
+                subClassHash.put(selectorSubClass,pvs);
             }
         }
         parseGeneralSelectors();
@@ -132,14 +129,11 @@ public class TSSHandler extends NamespaceHandler {
 	void read(Associable associable, Listable listable, int index) {
 		String[] parts = getPredicate().split(":");
 		String tssClass = parts[1];
-		String value = getValue().toString();
-        String newValue = mesquiteNodeAnnotation(tssClass, value);
-        setValue(newValue);
 
-        Object convertedValue = getValue();
+        Object convertedValue = mesquiteNodeAnnotation(tssClass, getValue().toString());
         Object pred = getPredicate();
         if (convertedValue.equals(Constants.NO_RULE)) {
-            MesquiteMessage.discreetNotifyUser ("couldn't find TSS rule " + pred.toString());
+            NexmlMesquiteManager.debug ("couldn't find TSS rule " + pred.toString()+" with value "+getValue().toString());
             // no rule specified
         } else {
             String[] mesProps = convertedValue.toString().split(";");
@@ -280,29 +274,40 @@ public class TSSHandler extends NamespaceHandler {
             MesquiteMessage.discreetNotifyUser("TSS class "+tssClassName+" not found");
             return null;
         }
-        List<PropertyValue> pvs;
-        if (hashvalue.getClass()==Hashtable.class) {
-            // check the tssValue to see if it's a string
-            pvs = (List)((Hashtable)hashvalue).get(tssValue);
+        List<PropertyValue> pvs = null;
+        if (tssValue.isEmpty()) {
+            tssValue = Constants.NO_VALUE;
+        }
+        // check the tssValue to see if it's a string
+        pvs = (List)((Hashtable)hashvalue).get(tssValue);
+        if (pvs == null) {
+            // is tssValue a number? because maybe it's in a range.
+            int val = 0;
+            try {
+                val = Integer.parseInt(tssValue);
+            } catch (Exception ex) {
+                NexmlMesquiteManager.debug("TSS class "+tssClassName+" doesn't have a subclass for "+tssValue);
+                // if it's not a number, there aren't any more types of classes this could be.
+                return null;
+            }
 
-            // check to see if the value is in a range
-            if (pvs == null) {
-                for (Enumeration e = ((Hashtable) hashvalue).keys(); e.hasMoreElements();) {
-                    String key = (String) e.nextElement();
-                    String[] keyParts = key.split("\\.");
+            for (Enumeration e = ((Hashtable) hashvalue).keys(); e.hasMoreElements();) {
+                String key = (String) e.nextElement();
+                String[] keyParts = key.split("\\.");
+                if (keyParts.length>1) {
                     int min = Integer.parseInt(keyParts[0]);
                     int max = Integer.parseInt(keyParts[1]);
-                    int val = Integer.parseInt(tssValue);
                     if ((val>=min) && (val<=max)) {
                         pvs = (List)((Hashtable)hashvalue).get(key);
+                        break;
                     }
                 }
             }
-        } else {
-            pvs = (List) hashvalue;
         }
         if (pvs == null) {
-            return null;
+            // there might be a default key; do one last check for that. If it fails, return null.
+            pvs = (List)((Hashtable)hashvalue).get(Constants.NO_VALUE);
+            return pvs;
         }
         Vector<PropertyValue> new_pvs = new Vector<PropertyValue>();
         // process the compound properties into single properties.
