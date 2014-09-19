@@ -26,12 +26,6 @@ node[cdao:has_Support_Value>=0.9] {
 	border: 10px;
 }
 
-node[nexss:bootstrap>=0.91][nexss:bootstrap<=1.0] {
-	border: 10px;
-	font-style: italic;
-	font-size: 200%;
-}
-
 node[nexss:chromosome=Y] {
 	color: blue;
 }

@@ -9,6 +9,7 @@ public class Constants {
 	public static final String NRURIString = "http://mesquiteproject.org/namereference#";
 	public static final String BeanURIString = "http://mesquiteproject.org/bean#";
 	public static final String BaseURIString = "http://mesquiteproject.org#";
+    public static final String NexSSURIString = "http://phylotastic.org/nexss#";
 
 	public static final String BasePrefix = "msq";
 	public static final String NRPrefix = "nr";

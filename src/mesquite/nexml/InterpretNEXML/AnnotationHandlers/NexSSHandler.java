@@ -20,14 +20,32 @@ import mesquite.trees.NodeLocsStandard.NodeLocsStandard;
 
 import com.osbcp.cssparser.*;
 
+class NexSSRule {
+    public String elementName;
+    public ArrayList<NexSSAttributeTest> attributeSelectors;
+    public ArrayList<String> descents;
+    public List<PropertyValue> pvs;
 
+    public String toString () {
+        return "rule for " + elementName + ", with attrselectors " + attributeSelectors.toString();
+    }
+}
+class NexSSAttributeTest {
+    public String property;
+    public String operator;
+    public String conditional;
+
+    public String toString() {
+        return "/"+property + operator + conditional+"/";
+    }
+}
 /**
  * @author rvosa
  *
  */
 public class NexSSHandler extends NamespaceHandler {
 	private List<Rule> mNexSSList;
-	private Hashtable mNexSSHash;
+	private Hashtable mNexSSElementHash;
     private LinkedList<File> mNexSSFile;
     private Vector<PropertyValue> treeProperties;
     private Vector<PropertyValue> figureProperties;
@@ -38,7 +56,7 @@ public class NexSSHandler extends NamespaceHandler {
 
     public NexSSHandler() {
         super();
-        mNexSSHash = new Hashtable();
+        mNexSSElementHash = new Hashtable();
         String nexSSFilePath = mesquite.lib.MesquiteModule.mesquiteDirectory + mesquite.lib.MesquiteFile.fileSeparator + "default.nexss";
         mNexSSFile = new LinkedList<File>();
         LinkedList<String> stylesheets = NexmlMesquiteManager.getStylesheets();
@@ -46,10 +64,10 @@ public class NexSSHandler extends NamespaceHandler {
         for (int i=0;i<stylesheets.size();i++) {
             mNexSSFile.add(new File(stylesheets.get(i)));
         }
-
+        NexmlMesquiteManager.debug("these are the stylesheets: " + mNexSSFile.toString());
         Scanner scanner = null;
-        String cssString = "";
         for (int f=0;f<mNexSSFile.size();f++) {
+            String cssString = "";
             File nexssfile = mNexSSFile.get(f);
             try {
                 scanner = new Scanner(nexssfile);
@@ -68,36 +86,54 @@ public class NexSSHandler extends NamespaceHandler {
             for (Rule r : mNexSSList) {
                 // we want to hash each rule as a value for each selector key separately.
                 List<Selector> selectors = r.getSelectors();
-
                 List<PropertyValue> pvs = r.getPropertyValues();
                 for (Selector selector : selectors) {
-                    String selectorName = selector.toString();
-                    String selectorSubClass = "";
-                    StringTokenizer selectorTokens = new StringTokenizer(selectorName);
-                    // each token is either the first selector or the descent.
-                    while (selectorTokens.hasMoreTokens()) {
-                        String selectorToken = selectorTokens.nextToken();
-//                        node[nexss:posterior_prob>=91][nexss:posterior_prob<=100]
-//                        String[] selectorConditionals = selectorToken.toString().split("\\.");
-//                        if (selectorConditionals.length > 1) {  // this selector has subclasses
-//                            selectorName = selectorConditionals[0];
-//                            selectorSubClass = selectorConditionals[1];
-//                        }
+                    // for ease of parsing: make a space between each bracket set:
+                    String selectorString = selector.toString().replaceAll("\\["," [");
+//                    NexmlMesquiteManager.debug("parsing the selector " + selectorString);
 
-                        String[] selectorConditionals = selectorToken.toString().split("\\[");
-                        if (selectorConditionals.length > 1) {  // this selector has conditionals
-                            selectorName = selectorConditionals[0];
-//                            String min = "";
-//                            String max = "";
-                            for (int i = 1; i < selectorConditionals.length; i++) {
-                                String str = selectorConditionals[i].replace("]", "");
-//                                if (str.contains("min")) {
-//                                    min = str.replaceAll("min\\s*=", "");
-//                                } else if (str.contains("max")) {
-//                                    max = str.replaceAll("max\\s*=", "");
-//                                }
-                                String[] selectorConditionalFrags = str.toString().split("=");
-                                if (selectorConditionalFrags.length > 1) {
+                    StringTokenizer selectorTokens = new StringTokenizer(selectorString);
+                    String elementName = selectorTokens.nextToken();
+
+                    ArrayList<NexSSRule> selectorArray = (ArrayList) mNexSSElementHash.get(elementName);
+                    NexSSRule rule = new NexSSRule();
+                    rule.elementName = elementName;
+                    rule.attributeSelectors = new ArrayList<NexSSAttributeTest>();
+                    rule.pvs = pvs;
+                    // if this is the first occurrence of a selector for this type of element, initialize it:
+                    if (selectorArray == null) {
+                        selectorArray = new ArrayList<NexSSRule>();
+                        mNexSSElementHash.put(elementName, selectorArray);
+                    }
+                    selectorArray.add(rule);
+
+//                    // each subsequent token is either a test or the descent.
+                    while (selectorTokens.hasMoreTokens()) {
+                        String[] selectorTests = selectorTokens.nextToken().toString().split("\\[");
+                        NexSSAttributeTest test = new NexSSAttributeTest();
+                        rule.attributeSelectors.add(test);
+                        if (selectorTests.length == 0) {
+                            // this applies to all instances of this element
+                            // TODO: check to see if the rest of the selector describes a descent
+                            // for now, basically attributeSelectorArray will be an empty arraylist
+                            test.property = "all";
+                            test.operator = "";
+                            test.conditional = "";
+                        } else {
+                            // this selector has tests
+                            // each subsequent token describes this test
+
+                            for (int i = 1; i < selectorTests.length; i++) {
+                                String str = selectorTests[i].replace("]", "");
+
+                                // check to see if this is a conditional test
+                                String[] selectorConditionalFrags = str.split("=");
+                                if (selectorConditionalFrags.length == 0) {
+                                    // this is a presence/absence test
+                                    test.property = str;
+                                    test.operator = "";
+                                    test.conditional = "";
+                                } else {
                                     // move the last char of the first half to be the operator
                                     String property = selectorConditionalFrags[0].substring(0,selectorConditionalFrags[0].length()-1);
                                     String operator = selectorConditionalFrags[0].substring(selectorConditionalFrags[0].length()-1);
@@ -108,29 +144,18 @@ public class NexSSHandler extends NamespaceHandler {
                                         property = property + operator;
                                         operator = "==";
                                     }
-//                                    NexmlMesquiteManager.debug("selector " + selectorName + " has conditional " + property + " /"+operator+"/ " + condition);
-                                    selectorName = property;
-                                    selectorSubClass = operator+condition;
+                                    test.property = property;
+                                    test.operator = operator;
+                                    test.conditional = condition;
                                 }
                             }
-//                            selectorSubClass = min + "/" + max;
                         }
-                        Hashtable subClassHash = (Hashtable) mNexSSHash.get(selectorName);
-                        if (subClassHash == null) {
-                            subClassHash = new Hashtable();
-                            mNexSSHash.put(selectorName, subClassHash);
-                        }
-                        if (selectorSubClass.isEmpty()) {
-                            selectorSubClass = Constants.NO_VALUE;
-                        }
-
-                        subClassHash.put(selectorSubClass, pvs);
                     }
+//                    NexmlMesquiteManager.debug("attributeSelector for "+ rule.elementName +" has array "+rule.attributeSelectors.toString());
                 }
             }
         }
-        NexmlMesquiteManager.debug("selector hash has " + mNexSSHash.keySet().toString());
-        NexmlMesquiteManager.debug("selector hash has " + mNexSSHash.values().toString());
+        NexmlMesquiteManager.debug("selector hash is " + mNexSSElementHash.toString());
         parseGeneralSelectors();
     }
 
@@ -159,15 +184,16 @@ public class NexSSHandler extends NamespaceHandler {
 	void read(Associable associable, Listable listable, int index) {
 		String[] parts = getPredicate().split(":");
 		String nexSSClass = getPredicate();
-
-        Object convertedValue = mesquiteNodeAnnotation(nexSSClass, getValue().toString());
+        Object convertedValue = mesquiteNodeAnnotation("node", getPredicate(), getValue().toString());
         Object pred = getPredicate();
         if (convertedValue.equals(Constants.NO_RULE)) {
-//            NexmlMesquiteManager.debug ("couldn't find NexSS rule " + pred.toString()+" with value "+getValue().toString());
+            NexmlMesquiteManager.debug ("couldn't find NexSS rule " + pred.toString()+" with value "+getValue().toString());
             // no rule specified
         } else {
+            NexmlMesquiteManager.debug ("found NexSS rule " + pred.toString()+" with value "+getValue().toString());
             String[] mesProps = convertedValue.toString().split(";");
             for (String prop : mesProps) {
+                NexmlMesquiteManager.debug ("reading " + convertedValue.toString());
                 if (prop.contains("nexss:")) {
                     String[] propParts = prop.split("=");
                     String convertedProp = propParts[0];
@@ -327,53 +353,80 @@ public class NexSSHandler extends NamespaceHandler {
         treeWindowMaker.doCommand("desuppressEPCResponse","",cc);
     }
 
-    private List<PropertyValue> getClass (String nexSSClassName, String nexSSValue) {
-		Object hashvalue = mNexSSHash.get(nexSSClassName);
-        if (hashvalue == null) {
-            MesquiteMessage.notifyProgrammer("NexSS class "+nexSSClassName+" not found");
+    private List<PropertyValue> getPVs(String elementStr, String nexSSProperty, String nexSSValue) {
+		ArrayList<NexSSRule> rules = (ArrayList<NexSSRule>)mNexSSElementHash.get(elementStr);
+
+        if (rules == null) {
+//            MesquiteMessage.notifyProgrammer("NexSS element "+elementStr+" not found");
             return null;
         }
-        NexmlMesquiteManager.debug ("found class " + nexSSClassName + " with value "+ nexSSValue);
+//        NexmlMesquiteManager.debug ("found element "+ elementStr + " with props " + nexSSProperty + " with value "+ nexSSValue);
+        ArrayList<NexSSRule> applicableRules = new ArrayList<NexSSRule>();
         List<PropertyValue> pvs = null;
-        if (nexSSValue.isEmpty()) {
+        if (nexSSProperty.isEmpty()) {
             nexSSValue = Constants.NO_VALUE;
-        }
-        // check the nexSSValue to see if it's a string
-        pvs = (List)((Hashtable)hashvalue).get(nexSSValue);
-        if (pvs == null) {
-            // is nexSSValue a number? because maybe it's in a range.
-            double val = 0;
-            try {
-                val = Double.parseDouble(nexSSValue);
-            } catch (Exception ex) {
-                MesquiteMessage.notifyProgrammer("couldn't parse the number "+nexSSValue);
-                // if it's not a number, there aren't any more types of classes this could be.
+            for (int x = rules.size() - 1; x >= 0; x--) {
+                applicableRules.add(rules.get(x));
             }
-
-            for (Enumeration e = ((Hashtable) hashvalue).keys(); e.hasMoreElements();) {
-                String key = (String) e.nextElement();
-                String[] keyParts = key.split("\\/");
-                if (keyParts.length>1) {
-                    double min = Double.parseDouble(keyParts[0]);
-                    double max = Double.parseDouble(keyParts[1]);
-//                    NexmlMesquiteManager.debug("looking at val="+val+", min="+min+", max="+max+" from key "+key);
-                    if ((val>=min) && (val<=max)) {
-                        pvs = (List)((Hashtable)hashvalue).get(key);
-                        break;
+        } else {
+            for (int x = rules.size() - 1; x >= 0; x--) {
+                NexSSRule thisRule = rules.get(x);
+                ArrayList<NexSSAttributeTest> attrselectors = thisRule.attributeSelectors;
+                boolean thisRuleMatches = false;
+                for (int i = 0; i < attrselectors.size(); i++) {
+                    NexSSAttributeTest thisTest = attrselectors.get(i);
+                    if (thisTest.property.equals(nexSSProperty)) {
+//                        NexmlMesquiteManager.debug ("examining " + thisRule.toString() + " for a match to " + nexSSValue);
+                        thisRuleMatches = true;
+                        if (thisTest.operator.equals("==")) {
+                            if (!nexSSValue.equals(thisTest.conditional)) {
+                                // this conditional fails
+                                thisRuleMatches = false;
+                            }
+                        } else if (thisTest.operator.equals(">")) {
+                            if (!(Float.valueOf(nexSSValue) > Float.valueOf(thisTest.conditional))) {
+                                // this conditional fails
+                                thisRuleMatches = false;
+                            }
+                        } else if (thisTest.operator.equals("<")) {
+                            if (!(Float.valueOf(nexSSValue) < Float.valueOf(thisTest.conditional))) {
+                                // this conditional fails
+                                thisRuleMatches = false;
+                            }
+                        } else if (thisTest.operator.equals("=>") || thisTest.operator.equals(">=")) {
+                            if (!(Float.valueOf(nexSSValue) >= Float.valueOf(thisTest.conditional))) {
+                                // this conditional fails
+                                thisRuleMatches = false;
+                            }
+                        } else if (thisTest.operator.equals("<=")|| thisTest.operator.equals("=<")) {
+                            if (!(Float.valueOf(nexSSValue) <= Float.valueOf(thisTest.conditional))) {
+                                // this conditional fails
+                                thisRuleMatches = false;
+                            }
+                        } else if (thisTest.operator.equals("")) {
+                            thisRuleMatches = true;
+                        }
                     }
                 }
+                if (thisRuleMatches) {
+                    applicableRules.add(thisRule);
+                }
+//            NexmlMesquiteManager.debug("rules that apply to " + nexSSProperty + " with val " + nexSSValue + ": " + applicableRules.toString());
             }
         }
-        if (pvs == null) {
-            // there might be a default key; do one last check for that. If it fails, return null.
-            pvs = (List)((Hashtable)hashvalue).get(Constants.NO_VALUE);
-            if (pvs == null) {
-                return null;
-            }
+        if (applicableRules.size() == 0) {
+            return null;
         }
         Vector<PropertyValue> new_pvs = new Vector<PropertyValue>();
+        Vector<PropertyValue> raw_pvs = new Vector<PropertyValue>();
+
+        for(int j = applicableRules.size()-1; j>=0; j--) {
+            NexSSRule thisRule = applicableRules.get(j);
+//            NexmlMesquiteManager.debug("applying " + thisRule.pvs.toString());
+            raw_pvs.addAll(thisRule.pvs);
+        }
         // process the compound properties into single properties.
-        for (PropertyValue pv : pvs) {
+        for (PropertyValue pv : raw_pvs) {
             if (pv.getProperty().equalsIgnoreCase("font")) {
                 //three components:
                 //font-style font-size font-family
@@ -426,12 +479,13 @@ public class NexSSHandler extends NamespaceHandler {
                 new_pvs.add(pv);
             }
         }
+
         return new_pvs;
 	}
 
-    private String mesquiteNodeAnnotation (String nexSSClass, String nexSSValue ) {
-		String formatted_pvs = nexSSClass+ "=" +nexSSValue;
-        List<PropertyValue> pvs = getClass(nexSSClass, nexSSValue);
+    private String mesquiteNodeAnnotation (String nexSSClass, String nexSSPropertyName, String nexSSValue ) {
+		String formatted_pvs = nexSSPropertyName+ "=" +nexSSValue;
+        List<PropertyValue> pvs = getPVs("node", nexSSPropertyName, nexSSValue);
         if (pvs == null) {
             return Constants.NO_RULE;
         }
@@ -523,7 +577,7 @@ public class NexSSHandler extends NamespaceHandler {
         figureProperties = new Vector<PropertyValue>();
         treeProperties = new Vector<PropertyValue>();
         scaleProperties = new Vector<PropertyValue>();
-        List<PropertyValue> pvs = getClass ("figure", "");
+        List<PropertyValue> pvs = getPVs("figure", "","");
         if (pvs != null) {
             for (PropertyValue pv : pvs) {
                 if (pv.getProperty().equalsIgnoreCase("background-color")) {
@@ -545,13 +599,13 @@ public class NexSSHandler extends NamespaceHandler {
             }
         }
 
-        pvs = getClass ("tree", "");
+        pvs = getPVs("tree", "","");
         if (pvs != null) {
             for (PropertyValue pv : pvs) {
                 if (pv.getProperty().equalsIgnoreCase("layout")) {
                     treeProperties.add(new PropertyValue("layout", pv.getValue().toUpperCase()));
                 } else if (pv.getProperty().equalsIgnoreCase("border-width")) {
-                    int value = convertToPixels(pv.getValue(),Constants.DEFAULT_BORDER_WIDTH);
+                    int value = convertToPixels(pv.getValue(), Constants.DEFAULT_BORDER_WIDTH);
                     treeProperties.add(new PropertyValue("border-width", String.valueOf(value)));
                 } else if (pv.getProperty().equalsIgnoreCase("border-color")) {
                     treeProperties.add(new PropertyValue("border-color", convertToMesColorNumber(pv.getValue())));
@@ -565,7 +619,7 @@ public class NexSSHandler extends NamespaceHandler {
             }
         }
 
-        pvs = getClass ("scale", "");
+        pvs = getPVs("scale", "","");
         if (pvs != null) {
             for (PropertyValue pv : pvs) {
                 if (pv.getProperty().equalsIgnoreCase("visible")) {

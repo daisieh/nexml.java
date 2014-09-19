@@ -100,25 +100,14 @@ public class NexmlMesquiteManager {
 	protected PredicateHandler getNamespaceHandler(Annotatable annotatable, Annotation annotation) {
 		PredicateHandler ph = getNamespaceHandlerFromURI(annotation.getPredicateNamespace());
         if (ph == null) { // couldn't find a declared namespace, so find a predicate handler
-            debug ("XML namespace "+annotation.getPredicateNamespace()+" for annotation "+annotation.getProperty()+" can't be found, using a local predicate handler instead.");
-            String predicate = getLocalProperty(annotation);
-            String handlerClassName = mPredicateHandlerMapping.getProperty(predicate);
-            if ( handlerClassName != null ) { // there is a mapped predicate handler
-                try {
-                    Class<?> handlerClass = Class.forName(handlerClassName);
-                    Constructor<?> declaredConstructor = handlerClass.getDeclaredConstructor(Annotatable.class,Annotation.class);
-                    ph = (PredicateHandler) declaredConstructor.newInstance(annotatable,annotation);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            } else { // couldn't find a mapped predicate handler either, so just make a generic one.
-                ph = new PredicateHandlerImpl() ;
-            }
+            URI nexssuri;
+            try {
+                nexssuri = new URI(Constants.NexSSURIString);
+                ph = getNamespaceHandlerFromURI(nexssuri);
+            } catch (Exception e) {}
         }
-        if (ph != null) {
-            return ph.initPredicateHandler(annotatable,annotation);
-        }
-        return null;
+        return ph.initPredicateHandler(annotatable,annotation);
+//        return null;
 	}
 
     protected NamespaceHandler getNamespaceHandlerFromURI(URI uri) {

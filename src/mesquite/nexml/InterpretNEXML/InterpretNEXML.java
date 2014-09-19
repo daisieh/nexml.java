@@ -50,13 +50,14 @@ public class InterpretNEXML extends FileInterpreterI {
 		try {
 			fs = new FileInputStream(file.getPath());
 			xmlDocument = DocumentFactory.parse(fs);
+            NexmlReader nr = new NexmlReader(this);
+            nr.setFileURI(file.getPath());
+            nr.fillProjectFromNexml(xmlDocument,project);
 		} catch ( Exception e ) {
+            e.toString();
 			e.printStackTrace();
-		}	
-		NexmlReader nr = new NexmlReader(this);
-        nr.setFileURI(file.getPath());
-	    nr.fillProjectFromNexml(xmlDocument,project);			
-	}		
+		}
+	}
 
 /* ============================  exporting ============================*/
 	/*.................................................................................................................*/
