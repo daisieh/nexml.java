@@ -1,4 +1,4 @@
-canvas {
+figure {
 	background-color: white;
 	width: 500px;
 	height: 500px;
@@ -16,78 +16,39 @@ scale {
 	visible: false;
 }
 
-trophic_level.herbivore {
-	color: green;
-}
-
-trophic_level.carnivore {
-	color: red;
-}
-
-posterior_prob[min=0][max=50] {
-	text: "<50";
-	font-style: italic;
-}
-
-posterior_prob[min=51][max=90] {
-	text: value;
-	font-style: italic;
-}
-
-posterior_prob[min=91][max=100] {
-	text: "*";
+node[nexss:bootstrap>=91][nexss:bootstrap<=100] {
 	border: 10px;
 	font-style: italic;
 	font-size: 200%;
 }
 
-bootstrap[min=91][max=100] {
+node[cdao:has_Support_Value>=0.9] {
+	border: 10px;
+}
+
+node[nexss:bootstrap>=0.91][nexss:bootstrap<=1.0] {
 	border: 10px;
 	font-style: italic;
 	font-size: 200%;
 }
 
-bootstrap[min=0.9][max=1.0] {
-	border: 10px;
-	font-style: italic;
-	font-size: 200%;
-}
-
-/*
-      <node about="#node746" id="node746" label="">
-        <meta content="0.97" datatype="xsd:string" id="meta748" property="tss:bootstrap" xsi:type="nex:LiteralMeta"/>
-      </node>
-      <node id="node750" label="NMY 11141" otu="otu38">
-        <meta content="Y" datatype="xsd:string" id="meta01" property="tss:chromosome" xsi:type="nex:LiteralMeta"/>
-        <meta content="SANG" datatype="xsd:string" id="meta01" property="tss:sequence_type" xsi:type="nex:LiteralMeta"/>
-      </node>
- */
-chromosome.Y {
+node[nexss:chromosome=Y] {
 	color: blue;
 }
 
-chromosome.X {
+node[nexss:chromosome=X] {
 	color: red;
 }
 
-sequence_type.SANG {
-	color: bold;
+node[nexss:sequence_type=SANG] {
+	font-style: bold;
 }
 
-sequence_type.TRAM {
-	color: italic;
+node[nexss:sequence_type=TRAM] {
+	font-style: italic;
 }
 
-
-majortransition {
-	border: 5px green solid;
+/* Here's a baroque selector, for testing purposes */
+tree node[nexss:ingroupClade=true][id=234] node.collapsed {
+    color: green;
 }
-
-colored_branch {
-    border: 10px value;
-}
-
-clade {
-    collapsed: true;
-}
-
