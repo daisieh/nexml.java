@@ -334,19 +334,21 @@ public class NexSSHandler extends NamespaceHandler {
 						nodeLocs.doCommand("toggleScale", "off", cc);
 					}
                 } else if (pv.getProperty().equalsIgnoreCase("border-color")) {
-                	// this isn't implemented yet
+		    nodeLocs.doCommand("scaleBorderColor",pv.getValue(),cc);
                 } else if (pv.getProperty().equalsIgnoreCase("border-width")) {
-                	// this isn't implemented yet
+                    nodeLocs.doCommand("scaleBorderWidth",pv.getValue(),cc);  
                 } else if (pv.getProperty().equalsIgnoreCase("border-style")) {
-                	// this isn't implemented yet
+                    nodeLocs.doCommand("scaleBorderLineStyle",pv.getValue(),cc);
                 } else if (pv.getProperty().equalsIgnoreCase("font-family")) {
-                    // this isn't implemented yet
+                    nodeLocs.doCommand("scaleFont",pv.getValue(),cc);
                 } else if (pv.getProperty().equalsIgnoreCase("font-size")) {
-                    // this isn't implemented yet
+                    nodeLocs.doCommand("scaleFontSize","12",cc);  // implement size parsing
+		} else if (pv.getProperty().equalsIgnoreCase("color")){
+		    nodeLocs.doCommand("scaleColor",pv.getValue(),cc);  // implement color parsing
                 } else if (pv.getProperty().equalsIgnoreCase("scale-width")) {
-                    //this isn't implemented yet
-                } else if (pv.getProperty().equalsIgnoreCase("scale-title")) {
-                    //this isn't implemented yet
+                    nodeLocs.doCommand("","",cc);
+                } else if (pv.getProperty().equalsIgnoreCase("title")) {
+                    nodeLocs.doCommand("scaleTitle",pv.getValue(),cc);
                 }
             }
         }
@@ -493,21 +495,21 @@ public class NexSSHandler extends NamespaceHandler {
 			String val = pv.getValue();
 
             val = val.replaceAll("value|VALUE", nexSSValue);
-            if (pv.getProperty().equals("border-color")) {
-                formatted_pvs = formatted_pvs + ";" + "color:" + convertToMesColorNumber(val);
-			} else if (pv.getProperty().equals("border-width")) {
-                formatted_pvs = formatted_pvs + ";" + "width:" + val;
-            } else if (pv.getProperty().equals("color")) {
-				formatted_pvs = formatted_pvs + ";" + ("taxoncolor:" + convertToMesColorNumber(val));
-			} else if (pv.getProperty().equals("collapsed")) {
-				if (val.equalsIgnoreCase("true")) {
-					formatted_pvs = formatted_pvs + ";" + "triangled:on";
-				}
-			}
-		}
-		NexmlMesquiteManager.debug(pvs.toString() + " converted to Mesquite annotation " + formatted_pvs);
-		return formatted_pvs;
-	}
+    		if (pv.getProperty().equals("border-color")) {
+    			formatted_pvs = formatted_pvs + ";" + "color:" + convertToMesColorNumber(val);
+    		} else if (pv.getProperty().equals("border-width")) {
+    			formatted_pvs = formatted_pvs + ";" + "width:" + val;
+    		} else if (pv.getProperty().equals("color")) {
+    			formatted_pvs = formatted_pvs + ";" + ("taxoncolor:" + convertToMesColorNumber(val));
+    		} else if (pv.getProperty().equals("collapsed")) {
+    			if (val.equalsIgnoreCase("true")) {
+    				formatted_pvs = formatted_pvs + ";" + "triangled:on";
+    			}
+    		}
+    	}
+    	NexmlMesquiteManager.debug(pvs.toString() + " converted to Mesquite annotation " + formatted_pvs);
+    	return formatted_pvs;
+    }
 
     private int convertToPixels (String stringValue, int defaultValue) {
         //convert this value to a point number
@@ -571,6 +573,15 @@ public class NexSSHandler extends NamespaceHandler {
         }
         return mesColor;
     }
+
+
+    //want to be able to convert to a line style specifier that Mesquite understands 
+    //(need to research what these are)
+    private String convertToMesLineStyle(String val){
+	return val;  // stub for now
+    }
+
+
 
     //    parses the general selectors "figure," "tree," and "scale"
     private void parseGeneralSelectors () {
@@ -636,12 +647,15 @@ public class NexSSHandler extends NamespaceHandler {
                 } else if (pv.getProperty().equalsIgnoreCase("border-color")) {
                     scaleProperties.add(new PropertyValue("border-color", convertToMesColorNumber(pv.getValue())));
                 } else if (pv.getProperty().equalsIgnoreCase("border-style")) {
-                    //this isn't implemented yet
+		    String value = convertToMesLineStyle(pv.getValue());
+                    scaleProperties.add(new PropertyValue("border-style", value));
                 } else if (pv.getProperty().equalsIgnoreCase("scale-width")) {
-                    //this isn't implemented yet
+		    //not implemented yet
                 } else if (pv.getProperty().equalsIgnoreCase("scale-title")) {
-                    //this isn't implemented yet
-                }
+                    scaleProperties.add(new PropertyValue("title", pv.getValue()));
+                } else if (pv.getProperty().equalsIgnoreCase("color")) {
+		    scaleProperties.add(new PropertyValue("color", convertToMesColorNumber(pv.getValue())));
+		}
             }
         }
     }
