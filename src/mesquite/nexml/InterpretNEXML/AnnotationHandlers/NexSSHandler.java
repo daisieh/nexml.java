@@ -342,7 +342,7 @@ public class NexSSHandler extends NamespaceHandler {
                 } else if (pv.getProperty().equalsIgnoreCase("font-family")) {
                     nodeLocs.doCommand("scaleFont",pv.getValue(),cc);
                 } else if (pv.getProperty().equalsIgnoreCase("font-size")) {
-                    nodeLocs.doCommand("scaleFontSize","12",cc);  // implement size parsing
+                    nodeLocs.doCommand("scaleFontSize",pv.getValue(),cc);  // implement size parsing
 		} else if (pv.getProperty().equalsIgnoreCase("color")){
 		    nodeLocs.doCommand("scaleColor",pv.getValue(),cc);  // implement color parsing
                 } else if (pv.getProperty().equalsIgnoreCase("scale-width")) {
